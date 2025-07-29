@@ -16,7 +16,6 @@ const path = require('path');
 // Import internal modules
 const vault = require('./vault');
 const logger = require('./logger');
-const driveManager = require('./drive-manager');
 const clickupManager = require('./clickup-manager');
 const scheduler = require('./scheduler');
 
