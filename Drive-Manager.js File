@@ -110,124 +110,32 @@ async function listFiles(options = {}) {
 }
 
 /**
- * Get file metadata
- * @param {string} fileId - The ID of the file
+ * Check the connection to Google Drive
  */
-async function getFileMetadata(fileId) {
+async function checkConnection() {
   try {
     const { drive } = await initialize();
     
-    const res = await drive.files.get({
-      fileId,
-      fields: 'id, name, mimeType, createdTime, modifiedTime, size, parents, description'
+    // Try to list a few files to verify connection
+    const res = await drive.files.list({
+      pageSize: 1,
+      fields: 'files(id, name)'
     });
-
-    log('info', `Retrieved metadata for file: ${res.data.name}`);
-    return { success: true, file: res.data };
-  } catch (error) {
-    log('error', `Failed to get file metadata for ${fileId}`, { error: error.message });
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Create a folder in Google Drive
- * @param {string} name - Folder name
- * @param {string} parentId - Parent folder ID (optional)
- */
-async function createFolder(name, parentId = null) {
-  try {
-    const { drive } = await initialize();
     
-    const fileMetadata = {
-      name,
-      mimeType: 'application/vnd.google-apps.folder'
+    return { 
+      success: true, 
+      connected: true,
+      message: 'Successfully connected to Google Drive',
+      sample: res.data.files
     };
-    
-    if (parentId) {
-      fileMetadata.parents = [parentId];
-    }
-
-    const res = await drive.files.create({
-      resource: fileMetadata,
-      fields: 'id, name'
-    });
-
-    log('info', `Created folder: ${name} with ID: ${res.data.id}`);
-    return { success: true, folder: res.data };
   } catch (error) {
-    log('error', `Failed to create folder: ${name}`, { error: error.message });
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Upload a file to Google Drive
- * @param {string} filePath - Local file path
- * @param {string} name - File name in Drive
- * @param {string} parentId - Parent folder ID (optional)
- */
-async function uploadFile(filePath, name, parentId = null) {
-  try {
-    const { drive } = await initialize();
-    
-    const fileMetadata = {
-      name
+    log('error', 'Failed to connect to Google Drive', { error: error.message });
+    return { 
+      success: false, 
+      connected: false,
+      message: 'Failed to connect to Google Drive',
+      error: error.message
     };
-    
-    if (parentId) {
-      fileMetadata.parents = [parentId];
-    }
-
-    const media = {
-      body: fs.createReadStream(filePath)
-    };
-
-    const res = await drive.files.create({
-      resource: fileMetadata,
-      media,
-      fields: 'id, name'
-    });
-
-    log('info', `Uploaded file: ${name} with ID: ${res.data.id}`);
-    return { success: true, file: res.data };
-  } catch (error) {
-    log('error', `Failed to upload file: ${name}`, { error: error.message });
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Download a file from Google Drive
- * @param {string} fileId - File ID
- * @param {string} destPath - Destination path
- */
-async function downloadFile(fileId, destPath) {
-  try {
-    const { drive } = await initialize();
-    
-    const res = await drive.files.get({
-      fileId,
-      alt: 'media'
-    }, { responseType: 'stream' });
-
-    const dest = fs.createWriteStream(destPath);
-    
-    return new Promise((resolve, reject) => {
-      res.data
-        .on('end', () => {
-          log('info', `Downloaded file to: ${destPath}`);
-          resolve({ success: true, path: destPath });
-        })
-        .on('error', err => {
-          log('error', `Error downloading file: ${err.message}`);
-          reject({ success: false, error: err.message });
-        })
-        .pipe(dest);
-    });
-  } catch (error) {
-    log('error', `Failed to download file: ${fileId}`, { error: error.message });
-    return { success: false, error: error.message };
   }
 }
 
@@ -289,43 +197,9 @@ async function scanFolder(folderId, depth = 2) {
   }
 }
 
-/**
- * Check the connection to Google Drive
- */
-async function checkConnection() {
-  try {
-    const { drive } = await initialize();
-    
-    // Try to list a few files to verify connection
-    const res = await drive.files.list({
-      pageSize: 1,
-      fields: 'files(id, name)'
-    });
-    
-    return { 
-      success: true, 
-      connected: true,
-      message: 'Successfully connected to Google Drive',
-      sample: res.data.files
-    };
-  } catch (error) {
-    log('error', 'Failed to connect to Google Drive', { error: error.message });
-    return { 
-      success: false, 
-      connected: false,
-      message: 'Failed to connect to Google Drive',
-      error: error.message
-    };
-  }
-}
-
 module.exports = {
   initialize,
   listFiles,
-  getFileMetadata,
-  createFolder,
-  uploadFile,
-  downloadFile,
-  scanFolder,
-  checkConnection
+  checkConnection,
+  scanFolder
 };
