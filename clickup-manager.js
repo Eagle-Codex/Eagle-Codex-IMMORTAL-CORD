@@ -1,4 +1,4 @@
-// Clickup-Manager.js
+// clickup-manager.js
 const axios = require('axios');
 
 const CLICKUP_API_BASE = 'https://api.clickup.com/api/v2';
@@ -42,8 +42,37 @@ async function testClickupConnection() {
   }
 }
 
+// Function to get tasks
+async function getTasks() {
+  try {
+    // This is a placeholder - replace with actual implementation
+    // For now, returning mock data
+    return [
+      { id: "task1", name: "Sample Task 1", status: "in progress" },
+      { id: "task2", name: "Sample Task 2", status: "complete" }
+    ];
+  } catch (err) {
+    console.error('Failed to get tasks:', err.message);
+    return [];
+  }
+}
+
+// Sync tasks function
+async function syncTasks() {
+  try {
+    const tasks = await getTasks();
+    console.log("✅ Synced tasks:", tasks.length);
+    return tasks;
+  } catch (err) {
+    console.error("❌ Sync failed:", err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   getClickUpTeams,
   createTask,
-  testClickupConnection
+  testClickupConnection,
+  getTasks,
+  syncTasks  // Make sure syncTasks is exported here
 };
