@@ -180,7 +180,7 @@ try {
 // ClickUp integration
 let clickupManager;
 try {
-  clickupManager = require('./Clickup-Manager');
+  clickupManager = require('./clickup-manager');  // lowercase to match your existing file
   log('info', 'ClickUp manager loaded successfully');
 } catch (error) {
   log('warn', 'Could not load ClickUp manager', { error: error.message });
