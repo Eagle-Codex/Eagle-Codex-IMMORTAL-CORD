@@ -1,0 +1,205 @@
+// drive-manager.js
+const { google } = require('googleapis');
+const fs = require('fs').promises;
+const path = require('path');
+
+// Configuration
+const SCOPES = ['https://www.googleapis.com/auth/drive'];
+const TOKEN_PATH = path.join(__dirname, 'token.json');
+const CREDENTIALS_PATH = path.join(__dirname, 'credentials.json');
+
+// Simple logging function
+function log(level, message, data = {}) {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] [${level.toUpperCase()}] ${message}`, data);
+}
+
+/**
+ * Initialize the Google Drive connection
+ */
+async function initialize() {
+  try {
+    log('info', 'Initializing Google Drive connection');
+    const auth = await getAuthClient();
+    const drive = google.drive({ version: 'v3', auth });
+    log('info', 'Google Drive connection established');
+    return { success: true, drive };
+  } catch (error) {
+    log('error', 'Failed to initialize Google Drive', { error: error.message });
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get the OAuth2 client
+ */
+async function getAuthClient() {
+  try {
+    // Check if we have stored credentials
+    let credentials;
+    try {
+      const content = await fs.readFile(CREDENTIALS_PATH);
+      credentials = JSON.parse(content);
+    } catch (error) {
+      log('warn', 'No credentials file found, using environment variables');
+      // Use environment variables if no file is found
+      credentials = {
+        installed: {
+          client_id: process.env.GOOGLE_CLIENT_ID,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET,
+          redirect_uris: ['urn:ietf:wg:oauth:2.0:oob']
+        }
+      };
+    }
+
+    const { client_id, client_secret, redirect_uris } = credentials.installed;
+    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+
+    // Check if we have a token
+    try {
+      const token = await fs.readFile(TOKEN_PATH);
+      oAuth2Client.setCredentials(JSON.parse(token));
+      log('info', 'Using stored token for authentication');
+    } catch (error) {
+      log('warn', 'No token file found, using refresh token from environment');
+      // Use refresh token from environment variables
+      oAuth2Client.setCredentials({
+        refresh_token: process.env.GOOGLE_REFRESH_TOKEN
+      });
+    }
+
+    return oAuth2Client;
+  } catch (error) {
+    log('error', 'Failed to get auth client', { error: error.message });
+    throw error;
+  }
+}
+
+/**
+ * List files in Google Drive
+ * @param {Object} options - Options for listing files
+ * @param {string} options.folderId - Folder ID to list files from (optional)
+ * @param {number} options.pageSize - Number of files to list (default: 10)
+ * @param {string} options.query - Search query (optional)
+ */
+async function listFiles(options = {}) {
+  try {
+    const { drive } = await initialize();
+    
+    const pageSize = options.pageSize || 10;
+    let query = options.query || '';
+    
+    // If folder ID is provided, add it to the query
+    if (options.folderId) {
+      query = `'${options.folderId}' in parents${query ? ' and ' + query : ''}`;
+    }
+
+    const res = await drive.files.list({
+      pageSize,
+      fields: 'nextPageToken, files(id, name, mimeType, createdTime, modifiedTime, size)',
+      q: query
+    });
+
+    const files = res.data.files;
+    log('info', `Found ${files.length} files`);
+    return { success: true, files };
+  } catch (error) {
+    log('error', 'Failed to list files', { error: error.message });
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Check the connection to Google Drive
+ */
+async function checkConnection() {
+  try {
+    const { drive } = await initialize();
+    
+    // Try to list a few files to verify connection
+    const res = await drive.files.list({
+      pageSize: 1,
+      fields: 'files(id, name)'
+    });
+    
+    return { 
+      success: true, 
+      connected: true,
+      message: 'Successfully connected to Google Drive',
+      sample: res.data.files
+    };
+  } catch (error) {
+    log('error', 'Failed to connect to Google Drive', { error: error.message });
+    return { 
+      success: false, 
+      connected: false,
+      message: 'Failed to connect to Google Drive',
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Scan a folder and return its structure
+ * @param {string} folderId - Folder ID to scan
+ * @param {number} depth - Maximum depth to scan (default: 2)
+ */
+async function scanFolder(folderId, depth = 2) {
+  if (depth <= 0) return null;
+  
+  try {
+    const { drive } = await initialize();
+    
+    // Get folder details
+    const folderRes = await drive.files.get({
+      fileId: folderId,
+      fields: 'id, name'
+    });
+    
+    const folder = {
+      id: folderRes.data.id,
+      name: folderRes.data.name,
+      type: 'folder',
+      children: []
+    };
+    
+    // List files in the folder
+    const res = await drive.files.list({
+      q: `'${folderId}' in parents`,
+      fields: 'files(id, name, mimeType)'
+    });
+    
+    const files = res.data.files;
+    
+    // Process each file/folder
+    for (const file of files) {
+      if (file.mimeType === 'application/vnd.google-apps.folder') {
+        // Recursively scan subfolders
+        const subFolder = await scanFolder(file.id, depth - 1);
+        if (subFolder) {
+          folder.children.push(subFolder);
+        }
+      } else {
+        folder.children.push({
+          id: file.id,
+          name: file.name,
+          type: 'file',
+          mimeType: file.mimeType
+        });
+      }
+    }
+    
+    log('info', `Scanned folder: ${folder.name}, found ${folder.children.length} items`);
+    return folder;
+  } catch (error) {
+    log('error', `Failed to scan folder: ${folderId}`, { error: error.message });
+    return null;
+  }
+}
+
+module.exports = {
+  initialize,
+  listFiles,
+  checkConnection,
+  scanFolder
+};
