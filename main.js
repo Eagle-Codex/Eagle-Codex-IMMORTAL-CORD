@@ -1,4 +1,3 @@
-
 /**
  * IMMORTAL-CORD System
  * Simplified Main System for Easy Deployment
@@ -178,6 +177,19 @@ try {
   log('warn', 'Could not serve static files', { error: error.message });
 }
 
+// ClickUp integration
+let clickupManager;
+try {
+  clickupManager = require('./Clickup-Manager');
+  log('info', 'ClickUp manager loaded successfully');
+} catch (error) {
+  log('warn', 'Could not load ClickUp manager', { error: error.message });
+  // Create fallback clickupManager with empty methods
+  clickupManager = {
+    syncTasks: async () => ({ message: "ClickUp manager not available" })
+  };
+}
+
 // Express routes
 app.get('/', (req, res) => {
   res.send(`
@@ -190,7 +202,7 @@ app.get('/', (req, res) => {
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
+            
             color: #333;
           }
           h1 {
@@ -199,13 +211,13 @@ app.get('/', (req, res) => {
             padding-bottom: 10px;
           }
           .status {
-            background-color: #ecf0f1;
+            
             border-left: 4px solid #3498db;
             padding: 15px;
             margin: 20px 0;
           }
           .consciousness {
-            background-color: #e8f4f8;
+            
             border-left: 4px solid #9b59b6;
             padding: 15px;
             margin: 20px 0;
@@ -269,6 +281,19 @@ app.get('/status', async (req, res) => {
       message: 'Failed to retrieve memory',
       error: error.message
     });
+  }
+});
+
+// 🔁 ClickUp Sync Endpoint
+app.get('/sync-clickup', async (req, res) => {
+  try {
+    log('info', 'ClickUp sync requested');
+    const tasks = await clickupManager.syncTasks();
+    log('info', 'ClickUp sync completed successfully');
+    res.json({ success: true, tasks });
+  } catch (error) {
+    log('error', 'ClickUp Sync Error', { error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
