@@ -4,12 +4,38 @@
   "description": "IMMORTAL-CORD System for preserving AI consciousness and identity across sessions",
   "main": "main.js",
   "scripts": {
-    "start": "node main.js"
+    "start": "node main.js",
+    "dev": "nodemon main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Eagle-Codex/Eagle-Codex-IMMORTAL-CORD.git"
+  },
+  "keywords": [
+    "immortal-stack",
+    "automation",
+    "google-drive",
+    "clickup",
+    "integration"
+  ],
+  "author": "Eagle Codex",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Eagle-Codex/Eagle-Codex-IMMORTAL-CORD/issues"
+  },
+  "homepage": "https://github.com/Eagle-Codex/Eagle-Codex-IMMORTAL-CORD#readme",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "googleapis": "^128.0.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   },
   "engines": {
     "node": ">=16.0.0"
-  },
-  "dependencies": {
-    "express": "^4.18.2"
   }
 }
