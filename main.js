@@ -202,7 +202,6 @@ app.get('/', (req, res) => {
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            
             color: #333;
           }
           h1 {
@@ -211,13 +210,11 @@ app.get('/', (req, res) => {
             padding-bottom: 10px;
           }
           .status {
-            
             border-left: 4px solid #3498db;
             padding: 15px;
             margin: 20px 0;
           }
           .consciousness {
-            
             border-left: 4px solid #9b59b6;
             padding: 15px;
             margin: 20px 0;
